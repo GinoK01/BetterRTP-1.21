@@ -1,14 +1,10 @@
 package me.SuperRonanCraft.BetterRTP.player.rtp;
 
-import java.util.concurrent.CompletableFuture;
-
 import org.bukkit.Bukkit;
-import org.bukkit.Chunk;
 import org.bukkit.Location;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
-import io.papermc.lib.PaperLib;
 import lombok.Getter;
 import me.SuperRonanCraft.BetterRTP.BetterRTP;
 import me.SuperRonanCraft.BetterRTP.references.customEvents.RTP_FailedEvent;
@@ -19,6 +15,7 @@ import me.SuperRonanCraft.BetterRTP.references.rtpinfo.QueueHandler;
 import me.SuperRonanCraft.BetterRTP.references.rtpinfo.RandomLocation;
 import me.SuperRonanCraft.BetterRTP.references.rtpinfo.worlds.WorldPlayer;
 import me.SuperRonanCraft.BetterRTP.versions.AsyncHandler;
+import me.SuperRonanCraft.BetterRTP.versions.ChunkHelper;
 
 public class RTPPlayer {
 
@@ -62,21 +59,8 @@ public class RTPPlayer {
                         loc = RandomLocation.generateLocation(worldPlayer);
                 }
                 attempts++; //Add an attempt
-                //Load chunk and find out if safe location (asynchronously)
-                AsyncHandler.sync(() -> {
-                    try { //Prior to 1.12 this async chunk will NOT work
-                        CompletableFuture<Chunk> chunk = PaperLib.getChunkAtAsync(loc);
-                        chunk.thenAccept(result -> {
-                            //BetterRTP.debug("Checking location for " + p.getName());
-                            attempt(sendi, loc);
-                        });
-                    } catch (IllegalStateException e) {
-                        //Legacy non-async support
-                        attempt(sendi, loc);
-                    } catch (Throwable ignored) {
-
-                    }
-                });
+                //Load chunk without blocking the region tick thread, then validate location
+                ChunkHelper.loadAt(loc, chunk -> attempt(sendi, loc));
             });
         }
     }
@@ -94,7 +78,7 @@ public class RTPPlayer {
                     getPl().getCooldowns().add(player, worldPlayer.getWorld());
                 tpLoc.setYaw(player.getLocation().getYaw());
                 tpLoc.setPitch(player.getLocation().getPitch());
-                AsyncHandler.sync(() -> settings.teleport.sendPlayer(sendi, player, tpLoc, worldPlayer, attempts, type));
+                AsyncHandler.syncAtLocation(tpLoc, () -> settings.teleport.sendPlayer(sendi, player, tpLoc, worldPlayer, attempts, type));
             } else {
                 if (worldPlayer.getPlayerInfo().applyCooldown)
                     getPl().getCooldowns().removeCooldown(player, worldPlayer.getWorld());

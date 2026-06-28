@@ -3,6 +3,7 @@ package me.SuperRonanCraft.BetterRTP.versions;
 import com.tcoded.folialib.impl.ServerImplementation;
 import com.tcoded.folialib.wrapper.task.WrappedTask;
 import me.SuperRonanCraft.BetterRTP.BetterRTP;
+import org.bukkit.Location;
 import org.bukkit.entity.Entity;
 
 public class AsyncHandler {
@@ -20,6 +21,10 @@ public class AsyncHandler {
     public static void syncAtEntity(Entity entity, Runnable runnable) {
         getFolia().runAtEntity(entity, task -> runnable.run());
         //Bukkit.getScheduler().runTask(BetterRTP.getInstance(), runnable);
+    }
+
+    public static void syncAtLocation(Location location, Runnable runnable) {
+        getFolia().runAtLocation(location, task -> runnable.run());
     }
 
     public static WrappedTask asyncLater(Runnable runnable, long ticks) {
